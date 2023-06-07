@@ -779,6 +779,7 @@ function parseHooks(global, document, current) {
         didParseCell: [],
         willDrawCell: [],
         didDrawCell: [],
+        willDrawPage: [],
         didDrawPage: [],
     };
     for (var _i = 0, allOptions_1 = allOptions; _i < allOptions_1.length; _i++) {
@@ -789,6 +790,8 @@ function parseHooks(global, document, current) {
             result.willDrawCell.push(options.willDrawCell);
         if (options.didDrawCell)
             result.didDrawCell.push(options.didDrawCell);
+        if (options.willDrawPage)
+            result.willDrawPage.push(options.willDrawPage);
         if (options.didDrawPage)
             result.didDrawPage.push(options.didDrawPage);
     }
@@ -983,6 +986,12 @@ var Table = /** @class */ (function () {
     Table.prototype.callEndPageHooks = function (doc, cursor) {
         doc.applyStyles(doc.userStyles);
         for (var _i = 0, _a = this.hooks.didDrawPage; _i < _a.length; _i++) {
+            var handler = _a[_i];
+            handler(new HookData(doc, this, cursor));
+        }
+    };
+    Table.prototype.callWillDrawPageHooks = function (doc, cursor) {
+        for (var _i = 0, _a = this.hooks.willDrawPage; _i < _a.length; _i++) {
             var handler = _a[_i];
             handler(new HookData(doc, this, cursor));
         }
@@ -1250,6 +1259,7 @@ function drawTable(jsPDFDoc, table) {
         nextPage(doc);
         cursor.y = margin.top;
     }
+    table.callWillDrawPageHooks(doc, cursor);
     var startPos = assign({}, cursor);
     table.startPageNumber = doc.pageNumber();
     if (settings.horizontalPageBreak === true) {
@@ -1587,6 +1597,8 @@ function addPage(doc, table, startPos, cursor, columns) {
     cursor.x = margin.left;
     cursor.y = margin.top;
     startPos.y = margin.top;
+    // call didAddPage hooks before any content is added to the page
+    table.callWillDrawPageHooks(doc, cursor);
     if (table.settings.showHead === 'everyPage') {
         table.head.forEach(function (row) { return printRow(doc, table, row, cursor, columns); });
         doc.applyStyles(doc.userStyles);
@@ -1598,7 +1610,9 @@ function nextPage(doc) {
     var newCurrent = doc.pageNumber();
     if (newCurrent === current) {
         doc.addPage();
+        return true;
     }
+    return false;
 }
 
 /**
